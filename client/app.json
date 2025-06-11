@@ -3,32 +3,9 @@
     "name": "Yunus Ias Academy",
     "slug": "Yunus-app",
     "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.yunusiasacademy.lmsapp",
-      "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      }
-    },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "package": "com.yunus3408.yunusapp",
-      "versionCode": 1
-    },
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
@@ -39,8 +16,8 @@
         "projectId": "890d16b8-72ef-4d4a-857b-7edecbb7cf4b"
       }
     },
-    "plugins": [
-      "expo-secure-store"
-    ]
+    "android": {
+      "package": "com.yunus3408.Yunusapp"
+    }
   }
 }
