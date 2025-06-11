@@ -17,6 +17,25 @@ import { StatusBar } from 'expo-status-bar';
 import { AuthContext } from '../../context/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Device from 'expo-device';
+
+// Function to get device information
+const getDeviceInfo = async () => {
+    try {
+        const deviceId = await Device.getDeviceIdAsync();
+        const deviceName = Device.deviceName || 'Unknown Device';
+        return {
+            deviceId,
+            deviceName
+        };
+    } catch (error) {
+        console.error('Error getting device info:', error);
+        return {
+            deviceId: 'unknown',
+            deviceName: 'Unknown Device'
+        };
+    }
+};
 
 const LoginScreen = ({ navigation }) => {
     const [email, setEmail] = useState('');
@@ -92,7 +111,7 @@ const LoginScreen = ({ navigation }) => {
                     AsyncStorage.setItem('token', data.data.token),
                     login(data.data.token, data.data.user)
                 ]);
-                
+
                 // Navigate to Home screen immediately after successful login
                 navigation.replace('Home');
             } else {

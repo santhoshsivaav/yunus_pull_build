@@ -44,7 +44,8 @@
     "react-native-video": "^6.14.0",
     "react-native-webview": "13.6.4",
     "react-router-dom": "^6.22.3",
-    "expo-dev-client": "~3.3.12"
+    "expo-dev-client": "~3.3.12",
+    "expo-device": "~5.9.4"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
