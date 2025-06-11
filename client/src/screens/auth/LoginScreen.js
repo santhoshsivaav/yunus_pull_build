@@ -16,11 +16,13 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { AuthContext } from '../../context/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LoginScreen = ({ navigation }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const { login, isLoading, error } = useContext(AuthContext);
+    const [loading, setLoading] = useState(false);
 
     useFocusEffect(
         useCallback(() => {
@@ -36,21 +38,71 @@ const LoginScreen = ({ navigation }) => {
 
     const handleLogin = async () => {
         if (!email || !password) {
-            Alert.alert('Error', 'Please enter both email and password');
+            Alert.alert('Error', 'Please fill in all fields');
             return;
         }
 
+        setLoading(true);
         try {
-            const success = await login(email, password);
-            if (success) {
-                // Only navigate if login was successful
+            // Get device information
+            const deviceInfo = await getDeviceInfo();
+
+            // Attempt login with device info
+            const response = await fetch(`${API_URL}/api/auth/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email,
+                    password,
+                    deviceId: deviceInfo.deviceId,
+                    deviceName: deviceInfo.deviceName
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                if (response.status === 403) {
+                    Alert.alert(
+                        'Device Limit Reached',
+                        'You have reached the maximum number of devices. Please remove a device from your account to continue.',
+                        [
+                            {
+                                text: 'Manage Devices',
+                                onPress: () => navigation.navigate('Profile', { screen: 'DeviceManagement' })
+                            },
+                            {
+                                text: 'Cancel',
+                                style: 'cancel'
+                            }
+                        ]
+                    );
+                } else {
+                    throw new Error(data.message || 'Login failed');
+                }
+                return;
+            }
+
+            // Login successful - store the token and user data in parallel
+            if (data.data && data.data.token && data.data.user) {
+                await Promise.all([
+                    AsyncStorage.setItem('user', JSON.stringify(data.data.user)),
+                    AsyncStorage.setItem('token', data.data.token),
+                    login(data.data.token, data.data.user)
+                ]);
+                
+                // Navigate to Home screen immediately after successful login
                 navigation.replace('Home');
             } else {
-                Alert.alert('Login Failed', error || 'Invalid email or password');
+                throw new Error('Invalid response format');
             }
-        } catch (err) {
-            console.error('Login error:', err);
-            Alert.alert('Login Failed', 'An unexpected error occurred. Please try again.');
+        } catch (error) {
+            console.error('Login error:', error);
+            Alert.alert('Error', error.message || 'Login failed');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -102,9 +154,9 @@ const LoginScreen = ({ navigation }) => {
                         <TouchableOpacity
                             style={styles.loginButton}
                             onPress={handleLogin}
-                            disabled={isLoading}
+                            disabled={loading}
                         >
-                            {isLoading ? (
+                            {loading ? (
                                 <ActivityIndicator color="#fff" />
                             ) : (
                                 <Text style={styles.loginButtonText}>Login</Text>

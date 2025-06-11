@@ -13,7 +13,7 @@ import {
     Easing,
     Modal
 } from 'react-native';
-import { Video } from 'expo-av';
+import { Video, Audio } from 'expo-av';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { courseService } from '../../services/courseService';
@@ -31,6 +31,7 @@ const VideoPlayerScreen = ({ navigation, route }) => {
     const [status, setStatus] = useState({});
     const [isCompleted, setIsCompleted] = useState(false);
     const [isSavingProgress, setIsSavingProgress] = useState(false);
+    const [retryCount, setRetryCount] = useState(0);
     const videoRef = useRef(null);
     const progressInterval = useRef(null);
     const [isLandscape, setIsLandscape] = useState(false);
@@ -71,84 +72,92 @@ const VideoPlayerScreen = ({ navigation, route }) => {
         };
     }, []);
 
-    // Fetch video details
-    useEffect(() => {
-        const fetchVideoDetails = async () => {
-            try {
+    // Fetch video details with retry mechanism
+    const fetchVideoDetails = async (retry = false) => {
+        try {
+            if (!retry) {
                 setLoading(true);
-                setError(null);
-
-                // Check if user is logged in
-                if (!user) {
-                    setError('Please log in to access this video');
-                    setLoading(false);
-                    return;
-                }
-
-                // Validate required parameters
-                if (!courseId || !videoId) {
-                    console.error('Missing required parameters:', { courseId, videoId });
-                    setError('Invalid video parameters');
-                    setLoading(false);
-                    return;
-                }
-
-                console.log('Fetching video details for:', { courseId, videoId });
-                const response = await courseService.getVideoPlayerUrl(courseId, videoId);
-                console.log('Video details response:', response);
-
-                if (!response) {
-                    throw new Error('No response received from server');
-                }
-
-                // Check for video URL
-                if (!response.videoUrl) {
-                    console.error('No video URL in response:', response);
-                    throw new Error('No video URL found in the lesson');
-                }
-
-                // Validate the video URL
-                try {
-                    new URL(response.videoUrl);
-                } catch (urlError) {
-                    console.error('Invalid video URL:', response.videoUrl);
-                    throw new Error('Invalid video URL format');
-                }
-
-                setVideo(response);
-
-                // Check if the video is already marked as completed
-                if (response.progress && response.progress.completed) {
-                    setIsCompleted(true);
-                }
-
-                // Set the playback position if there is saved progress
-                if (response.progress && response.progress.position > 0) {
-                    // Only set position if less than 95% of the video
-                    if (response.progress.position < (response.duration * 0.95)) {
-                        setTimeout(() => {
-                            if (videoRef.current) {
-                                videoRef.current.setPositionAsync(response.progress.position);
-                            }
-                        }, 500);
-                    }
-                }
-
-            } catch (err) {
-                console.error('Error fetching video:', err);
-                if (err.response?.status === 401) {
-                    setError('Please log in to access this video');
-                } else {
-                    setError(err.message || 'Failed to load video. Please try again.');
-                }
-            } finally {
-                setLoading(false);
             }
-        };
+            setError(null);
 
+            // Check if user is logged in
+            if (!user) {
+                setError('Please log in to access this video');
+                setLoading(false);
+                return;
+            }
+
+            // Validate required parameters
+            if (!courseId || !videoId) {
+                console.error('Missing required parameters:', { courseId, videoId });
+                setError('Invalid video parameters');
+                setLoading(false);
+                return;
+            }
+
+            console.log('Fetching video details for:', { courseId, videoId });
+            const response = await courseService.getVideoPlayerUrl(courseId, videoId);
+            console.log('Video details response:', response);
+
+            if (!response) {
+                throw new Error('No response received from server');
+            }
+
+            // Check for video URL
+            if (!response.videoUrl) {
+                console.error('No video URL in response:', response);
+                throw new Error('No video URL found in the lesson');
+            }
+
+            // Validate the video URL
+            try {
+                new URL(response.videoUrl);
+            } catch (urlError) {
+                console.error('Invalid video URL:', response.videoUrl);
+                throw new Error('Invalid video URL format');
+            }
+
+            setVideo(response);
+            setRetryCount(0); // Reset retry count on success
+
+            // Check if the video is already marked as completed
+            if (response.progress && response.progress.completed) {
+                setIsCompleted(true);
+            }
+
+            // Set the playback position if there is saved progress
+            if (response.progress && response.progress.position > 0) {
+                // Only set position if less than 95% of the video
+                if (response.progress.position < (response.duration * 0.95)) {
+                    setTimeout(() => {
+                        if (videoRef.current) {
+                            videoRef.current.setPositionAsync(response.progress.position);
+                        }
+                    }, 500);
+                }
+            }
+
+        } catch (err) {
+            console.error('Error fetching video:', err);
+            if (err.response?.status === 401) {
+                setError('Please log in to access this video');
+            } else {
+                setError(err.message || 'Failed to load video. Please try again.');
+                // Implement retry mechanism
+                if (retryCount < 3) {
+                    setRetryCount(prev => prev + 1);
+                    setTimeout(() => {
+                        fetchVideoDetails(true);
+                    }, 2000 * (retryCount + 1)); // Exponential backoff
+                }
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchVideoDetails();
-
-        // Clear the progress interval when component unmounts
         return () => {
             if (progressInterval.current) {
                 clearInterval(progressInterval.current);
@@ -228,7 +237,30 @@ const VideoPlayerScreen = ({ navigation, route }) => {
 
     const handleError = (error) => {
         console.error('Video playback error:', error);
-        setError('Error playing video. Please try again.');
+        let errorMessage = 'Error playing video. ';
+
+        if (error.message) {
+            if (error.message.includes('network')) {
+                errorMessage += 'Please check your internet connection.';
+                // Attempt to reload video after network error
+                if (retryCount < 3) {
+                    setRetryCount(prev => prev + 1);
+                    setTimeout(() => {
+                        if (videoRef.current) {
+                            videoRef.current.reloadAsync();
+                        }
+                    }, 2000 * (retryCount + 1));
+                }
+            } else if (error.message.includes('format')) {
+                errorMessage += 'The video format is not supported.';
+            } else if (error.message.includes('permission')) {
+                errorMessage += 'Please grant storage permissions to play videos.';
+            } else {
+                errorMessage += error.message;
+            }
+        }
+
+        setError(errorMessage);
     };
 
     const togglePlayPause = () => {
@@ -450,6 +482,59 @@ const VideoPlayerScreen = ({ navigation, route }) => {
         }, 100);
     };
 
+    // Initialize video player
+    useEffect(() => {
+        const initializeVideoPlayer = async () => {
+            try {
+                // Set up audio mode for video playback
+                await Audio.setAudioModeAsync({
+                    playsInSilentModeIOS: true,
+                    staysActiveInBackground: true,
+                    shouldDuckAndroid: true,
+                    playThroughEarpieceAndroid: false,
+                });
+
+                // Load video
+                if (video?.videoUrl) {
+                    const { status } = await videoRef.current.loadAsync(
+                        { uri: video.videoUrl },
+                        { shouldPlay: true },
+                        false
+                    );
+                    console.log('Video loaded with status:', status);
+                }
+            } catch (error) {
+                console.error('Error initializing video player:', error);
+                setError('Failed to initialize video player. Please try again.');
+            }
+        };
+
+        if (video?.videoUrl) {
+            initializeVideoPlayer();
+        }
+    }, [video?.videoUrl]);
+
+    // Handle video loading
+    const handleLoad = async () => {
+        try {
+            if (videoRef.current) {
+                const status = await videoRef.current.getStatusAsync();
+                console.log('Video loaded with status:', status);
+
+                // Set initial playback position if available
+                if (video?.progress?.position > 0) {
+                    await videoRef.current.setPositionAsync(video.progress.position);
+                }
+
+                // Start playback
+                await videoRef.current.playAsync();
+            }
+        } catch (error) {
+            console.error('Error loading video:', error);
+            setError('Failed to load video. Please try again.');
+        }
+    };
+
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
@@ -462,12 +547,23 @@ const VideoPlayerScreen = ({ navigation, route }) => {
         return (
             <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>{error || 'Video not found'}</Text>
-                <TouchableOpacity
-                    style={styles.button}
-                    onPress={() => navigation.goBack()}
-                >
-                    <Text style={styles.buttonText}>Go Back</Text>
-                </TouchableOpacity>
+                <View style={styles.errorButtons}>
+                    <TouchableOpacity
+                        style={[styles.button, styles.retryButton]}
+                        onPress={() => {
+                            setRetryCount(0);
+                            fetchVideoDetails();
+                        }}
+                    >
+                        <Text style={styles.buttonText}>Retry</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.button, styles.backButton]}
+                        onPress={() => navigation.goBack()}
+                    >
+                        <Text style={styles.buttonText}>Go Back</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
         );
     }
@@ -517,6 +613,7 @@ const VideoPlayerScreen = ({ navigation, route }) => {
                                     resizeMode="contain"
                                     onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
                                     onError={handleError}
+                                    onLoad={handleLoad}
                                     shouldPlay={true}
                                     isLooping={false}
                                     isMuted={false}
@@ -792,15 +889,21 @@ const styles = StyleSheet.create({
         lineHeight: 24,
     },
     button: {
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 5,
         backgroundColor: COLORS.primary,
-        paddingVertical: 12,
-        paddingHorizontal: 24,
-        borderRadius: 8,
+    },
+    retryButton: {
+        backgroundColor: '#27ae60',
+    },
+    backButton: {
+        backgroundColor: '#e74c3c',
     },
     buttonText: {
         color: '#fff',
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: '500',
     },
     errorContainer: {
         flex: 1,
@@ -814,6 +917,11 @@ const styles = StyleSheet.create({
         fontSize: 16,
         textAlign: 'center',
         marginBottom: 20,
+    },
+    errorButtons: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 10,
     },
     portraitButton: {
         position: 'absolute',
@@ -877,6 +985,11 @@ const styles = StyleSheet.create({
     videoTouchable: {
         width: '100%',
         height: '100%',
+    },
+    poster: {
+        width: '100%',
+        height: '100%',
+        resizeMode: 'cover',
     },
 });
 
