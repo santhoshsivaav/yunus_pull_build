@@ -24,7 +24,6 @@ import { COLORS } from '../../utils/theme';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { useFocusEffect } from '@react-navigation/native';
 import Constants from 'expo-constants';
-import * as Network from 'expo-network';
 
 const VideoPlayerScreen = ({ navigation, route }) => {
     const { courseId, videoId, videoTitle } = route.params;
@@ -54,20 +53,17 @@ const VideoPlayerScreen = ({ navigation, route }) => {
 
     const { user } = useContext(AuthContext);
 
-    // Check network status
+    // Check network status using NetInfo
     useEffect(() => {
-        const checkNetwork = async () => {
-            try {
-                const networkState = await Network.getNetworkStateAsync();
-                setIsNetworkAvailable(networkState.isConnected);
-                setNetworkType(networkState.type);
-            } catch (error) {
-                console.error('Error checking network:', error);
-            }
+        const checkNetwork = () => {
+            NetInfo.fetch().then(state => {
+                setIsNetworkAvailable(state.isConnected);
+                setNetworkType(state.type);
+            });
         };
 
         checkNetwork();
-        const unsubscribe = Network.addNetworkStateChangeListener(state => {
+        const unsubscribe = NetInfo.addEventListener(state => {
             setIsNetworkAvailable(state.isConnected);
             setNetworkType(state.type);
         });

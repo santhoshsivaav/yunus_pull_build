@@ -75,12 +75,6 @@
         {
           "initialOrientation": "DEFAULT"
         }
-      ],
-      [
-        "expo-network",
-        {
-          "networkPermission": "Allow $(PRODUCT_NAME) to access your network information."
-        }
       ]
     ]
   }
