@@ -16,20 +16,31 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.yourcompany.lmsapp"
+      "bundleIdentifier": "com.yunusiasacademy.lmsapp",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.yourcompany.lmsapp"
+      "package": "com.yunus3408.yunusapp",
+      "versionCode": 1
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
     },
     "extra": {
-      "apiUrl": "https://lms-yunus-app.onrender.com/api"
-    }
+      "apiUrl": "https://lms-yunus-app.onrender.com/api",
+      "eas": {
+        "projectId": "890d16b8-72ef-4d4a-857b-7edecbb7cf4b"
+      }
+    },
+    "plugins": [
+      "expo-secure-store"
+    ]
   }
 }

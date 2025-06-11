@@ -250,7 +250,7 @@ const Dashboard = () => {
                                     <TableCell>Email</TableCell>
                                     <TableCell>Role</TableCell>
                                     <TableCell>Preferred Categories</TableCell>
-                                    <TableCell>Actions</TableCell>
+                                    
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -267,17 +267,7 @@ const Dashboard = () => {
                                                     .join(', ')
                                                 : 'None'}
                                         </TableCell>
-                                        <TableCell>
-                                            <IconButton
-                                                onClick={() => handleOpenDialog(user)}
-                                                color="primary"
-                                            >
-                                                <EditIcon />
-                                            </IconButton>
-                                            <IconButton color="error">
-                                                <DeleteIcon />
-                                            </IconButton>
-                                        </TableCell>
+                                        
                                     </TableRow>
                                 ))}
                             </TableBody>

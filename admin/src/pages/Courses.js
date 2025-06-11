@@ -679,13 +679,7 @@ const Courses = () => {
                                             p: 2
                                         }}
                                     >
-                                        <IconButton
-                                            onClick={() => handleOpenDialog(course)}
-                                            color="primary"
-                                            size="small"
-                                        >
-                                            <EditIcon />
-                                        </IconButton>
+                                        
                                         <IconButton
                                             color="error"
                                             size="small"
