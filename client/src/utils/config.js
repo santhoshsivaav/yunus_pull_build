@@ -2,7 +2,7 @@
 // In a real app, these would be loaded from environment variables
 
 // API Configuration
-export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.219.119:5000/api';
+export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://lms-yunus-app.onrender.com/api';
 
 // App Configuration
 export const APP_CONFIG = {

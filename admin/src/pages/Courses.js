@@ -96,7 +96,7 @@ const Courses = () => {
     const fetchCourses = async () => {
         try {
             setLoading(true);
-            const response = await fetch('http://192.168.219.119:5000/api/courses', {
+            const response = await fetch('https://lms-yunus-app.onrender.com/api/courses', {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`,
                 },
@@ -130,7 +130,7 @@ const Courses = () => {
 
     const fetchCategories = async () => {
         try {
-            const response = await fetch('http://192.168.219.119:5000/api/categories', {
+            const response = await fetch('https://lms-yunus-app.onrender.com/api/categories', {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`,
                 },
@@ -526,8 +526,8 @@ const Courses = () => {
             console.log('Submitting course data:', formattedData);
 
             const url = editingCourse
-                ? `http://192.168.219.119:5000/api/courses/${editingCourse._id}`
-                : 'http://192.168.219.119:5000/api/courses';
+                ? `https://lms-yunus-app.onrender.com/api/courses/${editingCourse._id}`
+                : 'https://lms-yunus-app.onrender.com/api/courses';
 
             const response = await fetch(url, {
                 method: editingCourse ? 'PUT' : 'POST',
